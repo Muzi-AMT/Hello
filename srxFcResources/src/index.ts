@@ -1,0 +1,118 @@
+import "reflect-metadata";
+import {createConnection,getConnection} from "typeorm"
+import * as express from "express";
+import * as bodyParser from "body-parser";
+import Log4js from './util/logs';
+import rs1 from "./util/routeUtil"
+import {perm} from "./util/test";
+import * as child_process from "child_process"
+import * as  cluster from 'cluster'
+import {ipconfig} from "./entity/ipconfig";
+import {cpus} from 'os'
+const Logger = Log4js.getLogger('error');
+
+async function init() {
+    try {
+        await createConnection();
+    } catch (e) {
+        console.log("数据库错误");
+    }
+
+    const app = express();
+    app.use(express.static("public"));
+    app.use(bodyParser.json({limit: '50mb'}));
+    app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
+
+    app.all('*', (req, res, next) => {
+
+        res.header("Access-Control-Allow-Credentials", "true");
+        res.header('Access-Control-Allow-Origin', '*');
+        res.header('Access-Control-Allow-Headers', 'Content-Type');
+        res.header('Access-Control-Allow-Methods', '*');
+        next();
+    });
+
+
+    /*
+    var bmd=["/admin","/login","/quit"];
+    var filter=function(req,res,next) {
+
+        let path = req.path;
+
+        if (bmd.indexOf(path) >= 0) {
+            next();
+
+        } else {
+
+
+        }
+
+    }
+    app.use(filter);
+   */
+
+
+
+
+
+    try {
+        var rs = rs1();
+        for (let i = 0; i < rs.length; i++) {
+            app.use(rs[i].path, rs[i].route);
+        }
+
+    } catch (err) {
+        console.log("路由文件有问题");
+    }
+
+ //404
+    app.use( async function(req,res){
+        var requestedUrl = req.protocol + '://' + req.host + ':3000' + req.url;
+        var ip = req.host;
+        let Rutm=new Date();
+        let time = new Date(+new Date(Rutm) + 8 * 3600 * 1000).toISOString().replace(/T/g, ' ').replace(/\.[\d]{3}Z/, '')
+        let ipjl = {
+            interfaceName:requestedUrl,
+            interfaceDescribe:ip,
+            time:time
+        }
+        let add = await getConnection()
+            .createQueryBuilder()
+            .insert()
+            .into(ipconfig)
+            .values(ipjl)
+            .execute();
+        res.json({state: "404", code: 404})
+    });
+
+    //日志
+    const logger = Log4js.getLogger('http');
+    app.use(Log4js.connectLogger(logger, {level: 'info'}))
+    // const pemiss = await perm();
+    app.listen(3000);
+    console.log("3000端口连接成功");
+
+}
+
+
+/*
+if (cluster.isMaster) {
+    console.log('[master] ' + "start master...");
+
+    for (var i = 0; i < cpus().length; i++) {
+        cluster.fork();
+    }
+
+    cluster.on('listening', function (worker, address) {
+        console.log('[master] ' + 'listening: worker' + worker.id + ',pid:'
+            + worker.process.pid + ', Address:' + address.address + ":" + address.port);
+    });
+
+} else if (cluster.isWorker) {
+      
+   
+} 
+*/
+
+
+init();

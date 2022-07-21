@@ -1,0 +1,124 @@
+//工伤报表
+import * as express from "express";
+import stat from "../../util/state";
+import {selGshangzj, selyqgssbb, selYqszjbdb} from "../../service/Injury";
+import {queryOnetion} from "../../service/Generalpagingfullcheck";
+import {approvalform} from "../../entity/approvalform";
+import {getpermiss, postpermiss} from "../../util/permission";
+const Router = express.Router();
+export default Router;
+
+//工伤报表
+Router.post("/gsbb", async (req, res) => {
+
+    let per = await postpermiss("gsbb",req);
+    if(per.state==77){
+        //获取条件参数
+        let werretrieve = req.body.werretrieve;
+        //设置每页数据量
+        let pageSize = req.body.pageSize;
+        //获取当前页数
+        let pageIndex = req.body.pageIndex;
+        //获取模糊参数
+        let wherlike = req.body.wherlike;
+        //区域
+        let area = req.body.area
+        //增减
+        let decrease = req.body.decrease
+        if(werretrieve&&pageIndex&&pageSize&&wherlike){
+            let dson = await selGshangzj(werretrieve,wherlike,pageIndex,pageSize,area,decrease);
+            // @ts-ignore
+            dson.zhb = per.state
+            res.json(dson);
+        }else{
+            //非空判断返回空值
+            res.json(stat.nullvalue);
+        }
+    }else {
+        res.json(per);
+    }
+
+
+
+});
+
+//阳泉工伤申报表
+Router.get('/yqgsbxsbb', async (req, res) => {
+
+
+    let per = await getpermiss("yqgsbxsbb",req);
+    if(per.state==77){
+        //获取条件参数
+        let werretrieve = req.query.werretrieve;
+        if(werretrieve){
+            let dson = await queryOnetion(approvalform,werretrieve);
+            // @ts-ignore
+            dson.zhb = per.state
+            res.json(dson);
+        }else{
+            //非空判断返回空值
+            res.json(stat.nullvalue);
+        }
+    }else {
+        res.json(per);
+    }
+
+
+});
+
+//阳泉工伤申报表(上月数，本月数)
+Router.post('/yqgsbxsys', async (req, res) => {
+    let per = await postpermiss("yqgsbxsys",req);
+    if(per.state==77){
+        //获取条件参数
+        let werretrieve = req.body.werretrieve;
+        let wher = req.body.wher;
+        let area = req.body.area;
+        if(werretrieve&&wher){
+            let dson = await selyqgssbb(werretrieve,wher,area);
+            // @ts-ignore
+            dson.zhb = per.state
+            res.json(dson);
+        }else{
+            //非空判断返回空值
+            res.json(stat.nullvalue);
+        }
+    }else {
+        res.json(per);
+    }
+
+
+});
+
+
+//阳泉市参保单位人员增减变动表3-2
+Router.get('/yqscbbdb', async (req, res) => {
+
+    let per = await getpermiss("yqscbbdb",req);
+    if(per.state==77){
+        //获取条件参数
+        let werretrieve = req.query.werretrieve;
+        let wher = req.query.wher;
+        //设置每页数据量
+        let pageSize = req.query.pageSize;
+        //获取当前页数
+        let pageIndex = req.query.pageIndex;
+
+        if(werretrieve&&wher&&pageSize&&pageIndex){
+            let dson = await selYqszjbdb(werretrieve,wher,pageIndex,pageSize);
+            // @ts-ignore
+            dson.zhb = per.state
+            res.json(dson);
+        }else{
+            //非空判断返回空值
+            res.json(stat.nullvalue);
+        }
+    }else {
+        res.json(per);
+    }
+
+
+});
+
+Router.permissiom="gsbb:yqgsbxsbb:yqgsbxsys:yqscbbdb:";
+Router.des = "工伤报表:阳泉工伤申报表:阳泉工伤申报表(上月数，本月数):阳泉市参保单位人员增减变动表3-2:";
